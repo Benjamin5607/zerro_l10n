@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev -p 4310",
     "build": "next build",
-    "start": "next start -p 4310",
+    "start": "next start",
+    "start:local": "next start -p 4310",
     "cli": "npx tsx cli/index.ts"
   },
   "dependencies": {
