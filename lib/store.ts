@@ -30,18 +30,11 @@ export function getDataDir(): string {
   if (process.env.DATA_DIR) {
     return process.env.DATA_DIR;
   }
-  // When imported from ZeroAI monorepo root, prefer the service data folder.
-  const monorepoData = path.join(process.cwd(), 'services', 'zerro-l10n', 'data');
-  const localData = path.join(process.cwd(), 'data');
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const fs = require('node:fs') as typeof import('node:fs');
-    if (fs.existsSync(path.join(monorepoData, 'store.json')) || fs.existsSync(path.join(process.cwd(), 'services', 'zerro-l10n'))) {
-      return monorepoData;
-    }
-  } catch {
-    /* ignore */
+  // Vercel / serverless: only /tmp is writable
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join('/tmp', 'zerro-l10n');
   }
+  const localData = path.join(process.cwd(), 'data');
   return localData;
 }
 
