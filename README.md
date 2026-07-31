@@ -56,7 +56,11 @@ POST /api/auth/dev
 GET  /api/health
 ```
 
-LLM bind from ZeroAI Swarm (Translator / Reviewer / QA):
+LLM bind from ZeroAI Swarm (Translator / Reviewer / QA) uses the **same Market
+vault API keys** as the rest of ZeroAI. `translate_batch` / `review_batch` run on
+the ZeroAI BFF (cookies available), then write results back to this service.
+When the CAT UI is iframed inside ZeroAI, AI actions are `postMessage`-proxied
+to the parent so vault keys always apply.
 
 ```json
 {

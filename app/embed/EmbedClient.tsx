@@ -33,6 +33,15 @@ const STATUS_COLORS: Record<TranslationStatus, string> = {
 };
 
 async function workspace<T = unknown>(payload: Record<string, unknown>, llm?: LlmBind | null): Promise<T> {
+  const AI = new Set(['translate_batch', 'review_batch']);
+  const inIframe = typeof window !== 'undefined' && window.parent && window.parent !== window;
+
+  // When embedded in ZeroAI, route AI (and optionally all) actions through parent
+  // so Market vault cookies + Swarm lineup are used (Legal Research pattern).
+  if (inIframe && AI.has(String(payload.action || ''))) {
+    return workspaceViaParent<T>(payload);
+  }
+
   const res = await fetch(API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -42,7 +51,38 @@ async function workspace<T = unknown>(payload: Record<string, unknown>, llm?: Ll
   if (!res.ok) {
     throw new Error(typeof data?.error === 'string' ? data.error : 'Request failed');
   }
-  return data as T;
+  return (data?.result !== undefined ? data.result : data) as T;
+}
+
+function workspaceViaParent<T>(payload: Record<string, unknown>): Promise<T> {
+  const id = `l10n-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      window.removeEventListener('message', onMsg);
+      reject(new Error('ZeroAI parent timed out — open L10n from ZeroAI Workspace'));
+    }, 120_000);
+
+    function onMsg(e: MessageEvent) {
+      if (e.data?.type !== 'zerroai:l10n-action-result' || e.data?.id !== id) return;
+      window.clearTimeout(timer);
+      window.removeEventListener('message', onMsg);
+      if (!e.data.ok) {
+        reject(
+          new Error(
+            e.data?.data?.error ||
+              e.data?.data?.detail ||
+              'ZeroAI L10n action failed'
+          )
+        );
+        return;
+      }
+      const data = e.data.data;
+      resolve((data?.result !== undefined ? data.result : data) as T);
+    }
+
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: 'zerroai:l10n-action', id, payload }, '*');
+  });
 }
 
 function downloadJson(filename: string, data: unknown) {
