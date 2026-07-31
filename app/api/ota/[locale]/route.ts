@@ -16,18 +16,33 @@ export async function GET(
       return NextResponse.json({ error: 'projectId query parameter is required' }, { status: 400 });
     }
 
-    const result = await handleWorkspaceAction({
-      action: 'ota_bundle',
-      projectId,
-      locale,
-    });
+    try {
+      const result = await handleWorkspaceAction({
+        action: 'ota_bundle',
+        projectId,
+        locale,
+      });
 
-    return NextResponse.json(result, {
-      headers: {
-        'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
-        'Content-Type': 'application/json; charset=utf-8',
-      },
-    });
+      return NextResponse.json(result, {
+        headers: {
+          'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+      });
+    } catch (inner: unknown) {
+      // Soft-empty when project missing (ephemeral /tmp reseeds across instances)
+      if (inner instanceof L10nError && inner.code === 'PROJECT_NOT_FOUND') {
+        return NextResponse.json({
+          projectId,
+          locale,
+          version: 0,
+          strings: {},
+          count: 0,
+          empty: true,
+        });
+      }
+      throw inner;
+    }
   } catch (e: unknown) {
     if (e instanceof L10nError) {
       return NextResponse.json({ error: e.message, code: e.code }, { status: e.status });

@@ -69,8 +69,9 @@ function emptyStore(): StoreData {
 
 function seedDemoProject(store: StoreData, orgId: string): StoreData {
   const ts = now();
-  const projectId = randomUUID();
-  const resourceId = randomUUID();
+  // Stable IDs so serverless instances reseeding /tmp stay compatible
+  const projectId = 'zerro-demo';
+  const resourceId = 'zerro-demo-app';
 
   const project: Project = {
     id: projectId,
@@ -94,16 +95,46 @@ function seedDemoProject(store: StoreData, orgId: string): StoreData {
     updatedAt: ts,
   };
 
-  const sampleKeys: Array<{ key: string; sourceText: string; context?: string }> = [
-    { key: 'app.title', sourceText: 'Zerro AI', context: 'Application title' },
-    { key: 'app.welcome', sourceText: 'Welcome, {name}!', context: 'Greeting with placeholder' },
-    { key: 'app.save', sourceText: 'Save changes', context: 'Primary action button' },
-    { key: 'app.cancel', sourceText: 'Cancel', context: 'Secondary action button' },
-    { key: 'app.error.network', sourceText: 'Network error. Please try again.', context: 'Error message' },
+  const sampleKeys: Array<{
+    key: string;
+    sourceText: string;
+    context?: string;
+    ko?: string;
+  }> = [
+    {
+      key: 'app.title',
+      sourceText: 'Zerro AI',
+      context: 'Application title',
+      ko: 'Zerro AI',
+    },
+    {
+      key: 'app.welcome',
+      sourceText: 'Welcome, {name}!',
+      context: 'Greeting with placeholder',
+      ko: '환영합니다, {name}!',
+    },
+    {
+      key: 'app.save',
+      sourceText: 'Save changes',
+      context: 'Primary action button',
+      ko: '변경 사항 저장',
+    },
+    {
+      key: 'app.cancel',
+      sourceText: 'Cancel',
+      context: 'Secondary action button',
+      ko: '취소',
+    },
+    {
+      key: 'app.error.network',
+      sourceText: 'Network error. Please try again.',
+      context: 'Error message',
+      ko: '네트워크 오류입니다. 다시 시도해 주세요.',
+    },
   ];
 
   const keys: KeySegment[] = sampleKeys.map((s) => ({
-    id: randomUUID(),
+    id: `key-${s.key}`,
     projectId,
     resourceId,
     key: s.key,
@@ -113,9 +144,28 @@ function seedDemoProject(store: StoreData, orgId: string): StoreData {
     updatedAt: ts,
   }));
 
+  const translations: Translation[] = sampleKeys.flatMap((s) => {
+    const keyId = `key-${s.key}`;
+    const rows: Translation[] = [];
+    if (s.ko) {
+      rows.push({
+        id: `tr-${s.key}-ko`,
+        keyId,
+        projectId,
+        locale: 'ko',
+        text: s.ko,
+        status: 'approved',
+        createdAt: ts,
+        updatedAt: ts,
+      });
+    }
+    return rows;
+  });
+
   store.projects.push(project);
   store.resources.push(resource);
   store.keys.push(...keys);
+  store.translations.push(...translations);
 
   return store;
 }
