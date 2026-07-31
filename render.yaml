@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: zerro-l10n
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ZERRO_L10N_PORT
+        value: 4310
+      - key: DATA_DIR
+        value: /var/data
+    disk:
+      name: zerro-l10n-data
+      mountPath: /var/data
+      sizeGB: 1
